@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+
+# Env files
+.env
+
+# macOS
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (optional later)
+data/raw/
+data/processed/
+
+# iOS (once you add Xcode project)
+*.xcuserstate
+DerivedData/
