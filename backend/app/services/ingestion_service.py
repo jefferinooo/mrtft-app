@@ -14,7 +14,7 @@ class IngestionService:
         account = self.riot.get_account_by_riot_id(game_name, tag_line)
         puuid = account["puuid"]
 
-        # 2) Ensure player exists (or create)
+        # 2) Ensure requesting player exists (or create)
         player = db.query(Player).filter(Player.puuid == puuid).one_or_none()
         if player is None:
             player = Player(
@@ -26,6 +26,13 @@ class IngestionService:
             db.add(player)
             db.commit()
             db.refresh(player)
+        else:
+            # Optional: keep name/tag in sync if they were missing before
+            if not player.game_name:
+                player.game_name = account.get("gameName")
+            if not player.tag_line:
+                player.tag_line = account.get("tagLine")
+            db.commit()
 
         # 3) PUUID -> match ids
         match_ids = self.riot.get_match_ids_by_puuid(puuid, count=count)
@@ -34,7 +41,7 @@ class IngestionService:
         skipped = 0
 
         for match_id in match_ids:
-            # Skip duplicates
+            # Skip duplicates (match already stored)
             if db.query(Match).filter(Match.match_id == match_id).one_or_none():
                 skipped += 1
                 continue
@@ -57,30 +64,54 @@ class IngestionService:
             db.commit()
             db.refresh(match)
 
-            # Find this player's participant block
-            me = None
-            for p in info.get("participants", []):
-                if p.get("puuid") == puuid:
-                    me = p
-                    break
-
-            if me is None:
+            participants = info.get("participants", [])
+            if not participants:
+                # weird edge case; don't count as ingested
                 skipped += 1
                 continue
 
-            # Create participant row (your player's stats for that match)
-            participant = Participant(
-                match_id=match.id,
-                player_id=player.id,
-                placement=me.get("placement"),
-                level=me.get("level"),
-                gold_left=me.get("gold_left"),
-                last_round=me.get("last_round"),
-                total_damage=me.get("total_damage_to_players"),
-            )
-            db.add(participant)
-            db.commit()
+            # 5) Store ALL participants (typically 8)
+            for p in participants:
+                p_puuid = p.get("puuid")
+                if not p_puuid:
+                    continue
 
+                # Ensure player row exists for this participant
+                p_player = db.query(Player).filter(Player.puuid == p_puuid).one_or_none()
+                if p_player is None:
+                    p_player = Player(
+                        puuid=p_puuid,
+                        game_name=None,
+                        tag_line=None,
+                        region=None,
+                    )
+                    db.add(p_player)
+                    db.flush()  # assigns p_player.id without committing
+
+                # If you added the unique constraint (match_id, player_id),
+                # this is extra-safe but optional:
+                existing_participant = (
+                    db.query(Participant)
+                    .filter(Participant.match_id == match.id, Participant.player_id == p_player.id)
+                    .one_or_none()
+                )
+                if existing_participant:
+                    continue
+
+                db.add(
+                    Participant(
+                        match_id=match.id,
+                        player_id=p_player.id,
+                        placement=p.get("placement"),
+                        level=p.get("level"),
+                        gold_left=p.get("gold_left"),
+                        last_round=p.get("last_round"),
+                        total_damage=p.get("total_damage_to_players"),
+                    )
+                )
+
+            # Commit once per match (better performance + cleaner)
+            db.commit()
             ingested += 1
 
         return {
