@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
 from app.services.riot_client import RiotClient
 from app.db.models.player import Player
 from app.db.models.match import Match
@@ -8,6 +9,36 @@ from app.db.models.participant import Participant
 class IngestionService:
     def __init__(self) -> None:
         self.riot = RiotClient()
+
+    def _parse_patch(self, game_version: str | None) -> str | None:
+        """
+        converts version patch string into something digestible such as:
+        '16.5'
+        """
+        if not game_version:
+            return None
+
+        if "<Releases/" in game_version:
+            start = game_version.find("<Releases/") + len("<Releases/")
+            end = game_version.find(">", start)
+            if end != -1:
+                return game_version[start:end]
+
+        return game_version
+
+    def _parse_game_datetime(self, raw_datetime) -> datetime | None:
+        """
+        converts game_datetime into python dateline from milliseconds 
+        """
+        if raw_datetime is None:
+            return None
+
+        try:
+            return datetime.fromtimestamp(raw_datetime / 1000, tz=timezone.utc)
+        except Exception:
+            return None
+
+        
 
     def ingest_recent_matches(self, db: Session, game_name: str, tag_line: str, count: int = 20) -> dict:
         # 1) Riot ID -> PUUID
@@ -55,9 +86,9 @@ class IngestionService:
             # Create match row
             match = Match(
                 match_id=metadata.get("match_id", match_id),
-                patch=info.get("game_version"),
+                patch=self._parse_patch(info.get("game_version")),
                 queue_id=info.get("queue_id"),
-                game_datetime=None,  # we’ll convert later
+                game_datetime=self._parse_game_datetime(info.get("game_datetime")),
                 game_length=info.get("game_length"),
             )
             db.add(match)
