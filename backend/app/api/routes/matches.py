@@ -6,6 +6,7 @@ from app.db.models.match import Match
 from app.db.models.participant import Participant
 from app.db.models.player import Player
 from app.core.utils import format_game_length
+from app.core.utils import format_game_date
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
@@ -42,7 +43,7 @@ def get_match_detail(match_id: str, db: Session = Depends(get_db)):
         "match_id": match.match_id,
         "patch": match.patch,
         "queue_id": match.queue_id,
-        "game_datetime": match.game_datetime.isoformat() if match.game_datetime else None,
+        "game_date": format_game_date(match.game_datetime),
         "game_length_seconds": round(match.game_length, 2) if match.game_length is not None else None,
         "game_length_formatted": format_game_length(match.game_length),
         "participants": participants,

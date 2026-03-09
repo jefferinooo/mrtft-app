@@ -11,3 +11,13 @@ def format_game_length(seconds: float | None) -> str | None:
     remaining_seconds = total_seconds % 60
 
     return f"{minutes}:{remaining_seconds:02d}"
+
+def format_game_date(dt) -> str | None:
+    """
+    converts datetime into readable date.
+    ex: 2026-03-08 -> 'Mar 9'
+    """
+    if dt is None:
+        return None
+
+    return dt.strftime("%b %-d")

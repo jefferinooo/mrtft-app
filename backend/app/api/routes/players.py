@@ -7,6 +7,7 @@ from app.db.models.player import Player
 from app.db.models.participant import Participant
 from app.db.models.match import Match
 from app.core.utils import format_game_length
+from app.core.utils import format_game_date
 
 router = APIRouter(prefix="/players", tags=["players"])
 
@@ -69,7 +70,7 @@ def get_recent_matches(
             "patch": match.patch,
             "game_length_seconds": round(match.game_length, 2) if match.game_length is not None else None,
             "game_length_formatted": format_game_length(match.game_length),
-            "game_datetime": match.game_datetime.isoformat() if match.game_datetime else None,
+            "game_date": format_game_date(match.game_datetime),
         })
 
     return {
@@ -98,7 +99,7 @@ def get_player_placements(
             "match_id": match.match_id,
             "placement": participant.placement,
             "patch": match.patch,
-            "game_datetime": match.game_datetime.isoformat() if match.game_datetime else None,
+            "game_date": format_game_date(match.game_datetime),
         })
 
     return {
