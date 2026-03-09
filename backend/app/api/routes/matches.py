@@ -5,17 +5,9 @@ from app.api.deps import get_db
 from app.db.models.match import Match
 from app.db.models.participant import Participant
 from app.db.models.player import Player
+from app.core.utils import format_game_length
 
 router = APIRouter(prefix="/matches", tags=["matches"])
-
-def format_game_length(seconds: float | None) -> str | None:
-    if seconds is None:
-        return None
-
-    total_seconds = int(seconds)
-    minutes = total_seconds // 60
-    remaining_seconds = total_seconds % 60
-    return f"{minutes}:{remaining_seconds:02d}"
 
 @router.get("/{match_id}")
 def get_match_detail(match_id: str, db: Session = Depends(get_db)):

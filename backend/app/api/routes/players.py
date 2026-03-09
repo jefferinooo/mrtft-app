@@ -1,36 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_player
 from app.db.models.player import Player
 from app.db.models.participant import Participant
 from app.db.models.match import Match
+from app.core.utils import format_game_length
 
 router = APIRouter(prefix="/players", tags=["players"])
 
-def format_game_length(seconds: float | None) -> str | None:
-    if seconds is None:
-        return None
-
-    total_seconds = int(seconds)
-    minutes = total_seconds // 60
-    remaining_seconds = total_seconds % 60
-    return f"{minutes}:{remaining_seconds:02d}"
-
 @router.get("/{game_name}/{tag_line}/summary")
-def get_player_summary(game_name: str, tag_line: str, db: Session = Depends(get_db)):
-    # 1) Find the player in your database
-    player = (
-        db.query(Player)
-        .filter(Player.game_name == game_name, Player.tag_line == tag_line)
-        .one_or_none()
-    )
-
-    if player is None:
-        raise HTTPException(status_code=404, detail="Player not found in database. Ingest them first.")
-
-    # 2) Compute aggregate stats from participants table
+def get_player_summary(
+    player: Player = Depends(get_player),
+    db: Session = Depends(get_db),
+):
     result = (
         db.query(
             func.count(Participant.id).label("matches"),
@@ -57,17 +41,12 @@ def get_player_summary(game_name: str, tag_line: str, db: Session = Depends(get_
         "win_rate": round(float(result.win_rate), 3) if result.win_rate is not None else None,
     }
 
-@router.get("/{game_name}/{tag_line}/recent")
-def get_recent_matches(game_name: str, tag_line: str, db: Session = Depends(get_db)):
-    player = (
-        db.query(Player)
-        .filter(Player.game_name == game_name, Player.tag_line == tag_line)
-        .one_or_none()
-    )
 
-    if player is None:
-        raise HTTPException(status_code=404, detail="Player not found in database. Ingest them first.")
-    
+@router.get("/{game_name}/{tag_line}/recent")
+def get_recent_matches(
+    player: Player = Depends(get_player),
+    db: Session = Depends(get_db),
+):
     rows = (
         db.query(Participant, Match)
         .join(Match, Participant.match_id == Match.id)
@@ -98,21 +77,12 @@ def get_recent_matches(game_name: str, tag_line: str, db: Session = Depends(get_
         "matches": matches,
     }
 
+
 @router.get("/{game_name}/{tag_line}/placements")
-def get_player_placements(game_name: str, tag_line: str, db: Session = Depends(get_db)):
-    player = (
-        db.query(Player)
-        .filter(Player.game_name == game_name, Player.tag_line == tag_line)
-        .one_or_none()
-    )
-
-    if player is None:
-        raise HTTPException(status_code=404, detail="Player not found in database. Ingest them first.")
-
-    '''
-    .order_by is asc instead of desc because we want oldest to newest for graphing later
-    '''
-    
+def get_player_placements(
+    player: Player = Depends(get_player),
+    db: Session = Depends(get_db),
+):
     rows = (
         db.query(Participant, Match)
         .join(Match, Participant.match_id == Match.id)
@@ -128,6 +98,7 @@ def get_player_placements(game_name: str, tag_line: str, db: Session = Depends(g
             "match_id": match.match_id,
             "placement": participant.placement,
             "patch": match.patch,
+            "game_datetime": match.game_datetime.isoformat() if match.game_datetime else None,
         })
 
     return {
@@ -135,17 +106,12 @@ def get_player_placements(game_name: str, tag_line: str, db: Session = Depends(g
         "placements": placements,
     }
 
+
 @router.get("/{game_name}/{tag_line}/stats-by-patch")
-def get_stats_by_patch(game_name: str, tag_line: str, db: Session = Depends(get_db)):
-    player = (
-        db.query(Player)
-        .filter(Player.game_name == game_name, Player.tag_line == tag_line)
-        .one_or_none()
-    )
-
-    if player is None:
-        raise HTTPException(status_code=404, detail="Player not found in database. Ingest them first.")
-
+def get_stats_by_patch(
+    player: Player = Depends(get_player),
+    db: Session = Depends(get_db),
+):
     rows = (
         db.query(
             Match.patch.label("patch"),
@@ -178,16 +144,10 @@ def get_stats_by_patch(game_name: str, tag_line: str, db: Session = Depends(get_
 
 
 @router.get("/{game_name}/{tag_line}/placement-distribution")
-def get_placement_distribution(game_name: str, tag_line: str, db: Session = Depends(get_db)):
-    player = (
-        db.query(Player)
-        .filter(Player.game_name == game_name, Player.tag_line == tag_line)
-        .one_or_none()
-    )
-
-    if player is None:
-        raise HTTPException(status_code=404, detail="Player not found in database. Ingest them first.")
-
+def get_placement_distribution(
+    player: Player = Depends(get_player),
+    db: Session = Depends(get_db),
+):
     rows = (
         db.query(
             Participant.placement,
