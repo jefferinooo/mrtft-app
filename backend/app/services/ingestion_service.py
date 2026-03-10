@@ -50,8 +50,8 @@ class IngestionService:
         if player is None:
             player = Player(
                 puuid=puuid,
-                game_name=account.get("gameName"),
-                tag_line=account.get("tagLine"),
+                game_name=account.get("gameName").lower(),
+                tag_line=account.get("tagLine").lower(),
                 region=None,
             )
             db.add(player)

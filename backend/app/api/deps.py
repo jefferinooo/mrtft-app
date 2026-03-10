@@ -19,10 +19,13 @@ def get_player(
     db: Session = Depends(get_db),
 ) -> Player:
     player = (
-        db.query(Player)
-        .filter(Player.game_name == game_name, Player.tag_line == tag_line)
-        .one_or_none()
+    db.query(Player)
+    .filter(
+        Player.game_name == game_name.lower(),
+        Player.tag_line == tag_line.lower(),
     )
+    .one_or_none()
+)
 
     if player is None:
         raise HTTPException(

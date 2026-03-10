@@ -1,0 +1,57 @@
+import Foundation
+
+final class APIService {
+    static let shared = APIService()
+
+    private init() {}
+
+    private let baseURL = "http://127.0.0.1:8000"
+
+    func ingestMatches(gameName: String, tagLine: String, count: Int = 20) async throws {
+        let encodedGameName = gameName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? gameName
+        let encodedTagLine = tagLine.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? tagLine
+
+        let urlString = "\(baseURL)/ingest/\(encodedGameName)/\(encodedTagLine)?count=\(count)"
+
+        guard let url = URL(string: urlString) else {
+            throw URLError(.badURL)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+
+        guard 200..<300 ~= httpResponse.statusCode else {
+            throw URLError(.badServerResponse)
+        }
+    }
+
+    func fetchPlayerSummary(gameName: String, tagLine: String) async throws -> PlayerSummary {
+        let encodedGameName = gameName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? gameName
+        let encodedTagLine = tagLine.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? tagLine
+
+        let urlString = "\(baseURL)/players/\(encodedGameName)/\(encodedTagLine)/summary"
+
+        guard let url = URL(string: urlString) else {
+            throw URLError(.badURL)
+        }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+
+        guard 200..<300 ~= httpResponse.statusCode else {
+            throw URLError(.badServerResponse)
+        }
+
+        let decoder = JSONDecoder()
+        return try decoder.decode(PlayerSummary.self, from: data)
+    }
+}
