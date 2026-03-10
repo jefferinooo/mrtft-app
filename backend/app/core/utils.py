@@ -1,3 +1,11 @@
+import unicodedata
+
+def normalize_riot_id_component(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    return unicodedata.normalize("NFC", value).strip().casefold()
+
 def format_game_length(seconds: float | None) -> str | None:
     """
     convert game length from seconds to MM:SS format.

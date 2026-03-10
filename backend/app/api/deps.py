@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
 from app.db.models.player import Player
-
+from app.core.utils import normalize_riot_id_component
 
 def get_db():
     db = SessionLocal()
@@ -18,14 +18,17 @@ def get_player(
     tag_line: str,
     db: Session = Depends(get_db),
 ) -> Player:
+    normalized_game_name = normalize_riot_id_component(game_name)
+    normalized_tag_line = normalize_riot_id_component(tag_line)
+
     player = (
-    db.query(Player)
-    .filter(
-        Player.game_name == game_name.lower(),
-        Player.tag_line == tag_line.lower(),
+        db.query(Player)
+        .filter(
+            Player.game_name == normalized_game_name,
+            Player.tag_line == normalized_tag_line,
+        )
+        .one_or_none()
     )
-    .one_or_none()
-)
 
     if player is None:
         raise HTTPException(

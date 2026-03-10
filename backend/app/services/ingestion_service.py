@@ -4,6 +4,7 @@ from app.services.riot_client import RiotClient
 from app.db.models.player import Player
 from app.db.models.match import Match
 from app.db.models.participant import Participant
+from app.core.utils import normalize_riot_id_component
 
 
 class IngestionService:
@@ -49,11 +50,11 @@ class IngestionService:
         player = db.query(Player).filter(Player.puuid == puuid).one_or_none()
         if player is None:
             player = Player(
-                puuid=puuid,
-                game_name=account.get("gameName").lower(),
-                tag_line=account.get("tagLine").lower(),
-                region=None,
-            )
+            puuid=puuid,
+            game_name=normalize_riot_id_component(account.get("gameName")),
+            tag_line=normalize_riot_id_component(account.get("tagLine")),
+            region=None,
+        )
             db.add(player)
             db.commit()
             db.refresh(player)
