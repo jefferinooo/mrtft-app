@@ -34,14 +34,30 @@ struct PlacementDistributionView: View {
                         x: .value("Placement", bar.placement),
                         y: .value("Count", bar.count)
                     )
+                    .foregroundStyle(color(for: bar.placement))
                     .annotation(position: .top) {
                         Text("\(bar.count)")
                             .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(color(for: bar.placement))
                     }
                 }
                 .frame(height: 240)
-                .chartXAxisLabel("Placement")
-                .chartYAxisLabel("Frequency")
+                .chartXAxis {
+                    AxisMarks { value in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel() {
+                            if let placement = value.as(String.self) {
+                                Text(placement)
+                                    .foregroundColor(color(for: placement))
+                            }
+                        }
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading)
+                }
             }
         }
         .padding()
@@ -49,6 +65,29 @@ struct PlacementDistributionView: View {
         .cornerRadius(12)
         .task {
             await viewModel.loadDistribution(gameName: gameName, tagLine: tagLine)
+        }
+    }
+
+    private func color(for placement: String) -> Color {
+        switch placement {
+        case "1st":
+            return .yellow
+        case "2nd":
+            return .pink
+        case "3rd":
+            return .blue
+        case "4th":
+            return .green
+        case "5th":
+            return .gray
+        case "6th":
+            return Color(.systemGray3)
+        case "7th":
+            return Color(.systemGray)
+        case "8th":
+            return Color(.lightGray)
+        default:
+            return .blue
         }
     }
 }
