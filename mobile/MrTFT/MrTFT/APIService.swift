@@ -54,4 +54,50 @@ final class APIService {
         let decoder = JSONDecoder()
         return try decoder.decode(PlayerSummary.self, from: data)
     }
+    
+    func fetchRecentMatches(gameName: String, tagLine: String) async throws -> RecentMatchesResponse {
+        let encodedGameName = gameName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? gameName
+        let encodedTagLine = tagLine.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? tagLine
+
+        let urlString = "\(baseURL)/players/\(encodedGameName)/\(encodedTagLine)/recent"
+
+        guard let url = URL(string: urlString) else {
+            throw URLError(.badURL)
+        }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+
+        guard 200..<300 ~= httpResponse.statusCode else {
+            throw URLError(.badServerResponse)
+        }
+
+        let decoder = JSONDecoder()
+        return try decoder.decode(RecentMatchesResponse.self, from: data)
+    }
+    
+    func fetchMatchDetail(matchID: String) async throws -> MatchDetailResponse {
+        let encodedMatchID = matchID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? matchID
+        let urlString = "\(baseURL)/matches/\(encodedMatchID)"
+
+        guard let url = URL(string: urlString) else {
+            throw URLError(.badURL)
+        }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+
+        guard 200..<300 ~= httpResponse.statusCode else {
+            throw URLError(.badServerResponse)
+        }
+
+        let decoder = JSONDecoder()
+        return try decoder.decode(MatchDetailResponse.self, from: data)
+    }
 }
