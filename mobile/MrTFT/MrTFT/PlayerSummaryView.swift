@@ -9,13 +9,13 @@ struct PlayerSummaryView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-
                 Text("\(gameName)#\(tagLine)")
                     .font(.largeTitle)
                     .fontWeight(.bold)
+                    .multilineTextAlignment(.center)
 
                 if viewModel.isLoading {
-                    ProgressView("Loading profile...")
+                    ProgressView("Refreshing and loading profile...")
                 } else if !viewModel.errorMessage.isEmpty {
                     Text(viewModel.errorMessage)
                         .foregroundColor(.red)
@@ -42,6 +42,11 @@ struct PlayerSummaryView: View {
                         .background(Color(.systemGray6))
                         .cornerRadius(12)
                     }
+
+                    PlacementDistributionView(
+                        gameName: gameName,
+                        tagLine: tagLine
+                    )
 
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Recent Matches")
