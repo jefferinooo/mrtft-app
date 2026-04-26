@@ -36,3 +36,14 @@ class RiotClient:
         r = httpx.get(url, headers=self.headers, timeout=20)
         r.raise_for_status()
         return r.json()
+    
+    def get_account_by_puuid(self, puuid: str) -> dict:
+        url = f"https://{settings.RIOT_REGION}.api.riotgames.com/riot/account/v1/accounts/by-puuid/{puuid}"
+
+        response = httpx.get(
+            url,
+            headers={"X-Riot-Token": settings.RIOT_API_KEY},
+        )
+
+        response.raise_for_status()
+        return response.json()

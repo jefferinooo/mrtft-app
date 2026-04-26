@@ -7,6 +7,8 @@ from app.db.models.participant import Participant
 from app.db.models.player import Player
 from app.core.utils import format_game_length
 from app.core.utils import format_game_date
+from app.services.riot_client import RiotClient
+from app.core.utils import normalize_riot_id_component
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
@@ -25,8 +27,28 @@ def get_match_detail(match_id: str, db: Session = Depends(get_db)):
         .all()
     )
 
+    riot = RiotClient()
+
     participants = []
+
     for participant, player in rows:
+        if player.game_name is None or player.tag_line is None:
+            try:
+                account = riot.get_account_by_puuid(player.puuid)
+                print("Backfilled account:", account)
+
+                player.game_name = normalize_riot_id_component(account.get("gameName"))
+                player.tag_line = normalize_riot_id_component(account.get("tagLine"))
+
+                db.add(player)
+                db.commit()
+                db.refresh(player)
+
+            except Exception as e:
+                print("Failed to backfill player:", player.puuid)
+                print("Error type:", type(e))
+                print("Error:", e)
+
         participants.append({
             "player_id": player.id,
             "puuid": player.puuid,
@@ -44,6 +66,7 @@ def get_match_detail(match_id: str, db: Session = Depends(get_db)):
         "patch": match.patch,
         "queue_id": match.queue_id,
         "game_date": format_game_date(match.game_datetime),
+        "game_datetime": match.game_datetime.isoformat() if match.game_datetime else None,
         "game_length_seconds": round(match.game_length, 2) if match.game_length is not None else None,
         "game_length_formatted": format_game_length(match.game_length),
         "participants": participants,
