@@ -5,6 +5,7 @@ struct PlayerSummaryView: View {
     let tagLine: String
 
     @StateObject private var viewModel = PlayerSummaryViewModel()
+    @State private var hasLoaded = false
 
     var body: some View {
         ScrollView {
@@ -14,8 +15,14 @@ struct PlayerSummaryView: View {
                     .fontWeight(.bold)
                     .multilineTextAlignment(.center)
 
+                if viewModel.isRefreshing {
+                    Text("Refreshing latest matches...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
                 if viewModel.isLoading {
-                    ProgressView("Refreshing and loading profile...")
+                    ProgressView("Loading profile...")
                 } else if !viewModel.errorMessage.isEmpty {
                     Text(viewModel.errorMessage)
                         .foregroundColor(.red)
@@ -99,8 +106,16 @@ struct PlayerSummaryView: View {
         }
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            await viewModel.loadProfile(gameName: gameName, tagLine: tagLine)
+        .refreshable {
+            viewModel.startRefresh(gameName: gameName, tagLine: tagLine)
+        }
+        .onAppear {
+            guard !hasLoaded else { return }
+            hasLoaded = true
+
+            Task {
+                await viewModel.loadProfile(gameName: gameName, tagLine: tagLine)
+            }
         }
     }
 

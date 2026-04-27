@@ -124,4 +124,25 @@ final class APIService {
         let decoder = JSONDecoder()
         return try decoder.decode(PlacementDistributionResponse.self, from: data)
     }
+    
+    func ingestPlayer(gameName: String, tagLine: String) async throws {
+        let encodedGameName = gameName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? gameName
+        let encodedTagLine = tagLine.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? tagLine
+
+        let urlString = "\(baseURL)/ingest/\(encodedGameName)/\(encodedTagLine)"
+
+        guard let url = URL(string: urlString) else {
+            throw URLError(.badURL)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              200..<300 ~= httpResponse.statusCode else {
+            throw URLError(.badServerResponse)
+        }
+    }
 }
