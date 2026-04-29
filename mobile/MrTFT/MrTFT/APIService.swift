@@ -5,7 +5,7 @@ final class APIService {
 
     private init() {}
 
-    private let baseURL = "http://127.0.0.1:8000"
+    private let baseURL = "http://mrtft-alb-2067101800.us-west-2.elb.amazonaws.com"
 
     func ingestMatches(gameName: String, tagLine: String, count: Int = 20) async throws {
         let encodedGameName = gameName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? gameName
